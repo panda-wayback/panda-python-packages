@@ -31,8 +31,9 @@ jobs:
         env:
           TWINE_USERNAME: ${{ github.actor }}
           TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-          TWINE_REPOSITORY_URL: https://pypi.pkg.github.com/${{ github.repository }}
+          # 关键点：URL 必须包含仓库名，且必须以斜杠结尾
+          TWINE_REPOSITORY_URL: https://pypi.pkg.github.com/${{ github.repository }}/
         run: |
           hatch build
-          # 使用 twine 上传，这是 GitHub Packages 最推荐的方式
-          twine upload --repository-url $TWINE_REPOSITORY_URL dist/*
+          # 使用 --verbose 模式以便排查 404
+          twine upload --repository-url $TWINE_REPOSITORY_URL --verbose dist/*
