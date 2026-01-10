@@ -41,15 +41,8 @@ jobs:
               hatch build
               
               # 发布到 GitHub Packages
-              # 注意：GitHub Packages 的仓库地址格式为 https://npm.pkg.github.com/OWNER
-              # 但对于 Python (PyPI 协议)，它是 https://maven.pkg.github.com/OWNER/REPO (或者是特殊的 URL)
-              # 实际上 GitHub Packages 的 Python 支持通常使用这个 URL:
-              # https://github.com/OWNER/REPO_NAME (但这不适用于 Hatch)
-              
-              # 纠正：GitHub Packages 使用 https://maven.pkg.github.com/OWNER/REPO 为兼容性
-              # 但最简单的是直接在 Hatch 中配置自定义 Index
-              
-              hatch publish -r https://maven.pkg.github.com/${{ github.repository }} -u ${{ github.actor }} -a ${{ secrets.GITHUB_TOKEN }}
+              # Python 的正确地址是 https://pypi.pkg.github.com/OWNER/
+              hatch publish -r https://pypi.pkg.github.com/${{ github.repository_owner }}/ -u ${{ github.actor }} -a ${{ secrets.GITHUB_TOKEN }}
               
               cd ..
             fi
