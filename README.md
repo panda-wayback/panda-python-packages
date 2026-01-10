@@ -1,12 +1,25 @@
-# Panda Python Packages
+# Panda Python Packages (panda-wayback)
 
-这是一个基于 Python 的工具库合集，采用平铺文件夹结构管理，每个文件夹代表一个独立的 Python 包。
+这是一个集成的 Python 工具库，采用命名空间 (Namespace) 模式管理多个模块。
 
 ## 项目结构
 
-- `panda_utils/`: 基础工具库 (示例)
-- ... (后续添加更多)
+- `src/panda/utils/`: 基础工具模块
+- `src/panda/sys/`: 系统相关模块 (预留)
+
+## 安装
+
+```bash
+pip install panda-wayback --index-url https://x-access-token:${GITHUB_TOKEN}@pypi.pkg.github.com/panda-wayback/panda-python-packages
+```
+
+## 使用
+
+```python
+from panda.utils import hello
+print(hello())
+```
 
 ## 发布
+推送到 `main` 分支会自动触发 GitHub Actions 发布新版本到 GitHub Packages。
 
-项目配置了 GitHub Actions，推送到特定分支或打 Tag 时会自动发布到 GitHub Packages。

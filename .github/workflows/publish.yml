@@ -31,19 +31,6 @@ jobs:
           HATCH_INDEX_USER: ${{ github.actor }}
           HATCH_INDEX_AUTH: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 遍历所有包含 pyproject.toml 的子目录
-          for dir in */; do
-            if [ -f "${dir}pyproject.toml" ]; then
-              echo "Processing ${dir}..."
-              cd ${dir}
-              
-              # 构建包
-              hatch build
-              
-              # 发布到 GitHub Packages
-              # Python 的正确地址是 https://pypi.pkg.github.com/OWNER/
-              hatch publish -r https://pypi.pkg.github.com/${{ github.repository_owner }}/ -u ${{ github.actor }} -a ${{ secrets.GITHUB_TOKEN }}
-              
-              cd ..
-            fi
-          done
+          hatch build
+          # 使用正确的 GitHub Packages PyPI 终端
+          hatch publish -r https://pypi.pkg.github.com/${{ github.repository }} -u ${{ github.actor }} -a ${{ secrets.GITHUB_TOKEN }}
