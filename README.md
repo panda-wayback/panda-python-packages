@@ -1,11 +1,9 @@
 # Panda Python Packages
 
-这是一个集成的 Python 工具库。
-
 ## 安装
 
 ```bash
-pip install panda-python-packages --index-url https://x-access-token:${GITHUB_TOKEN}@pypi.pkg.github.com/panda-wayback/panda-python-packages
+pip install panda_python_packages --index-url https://x-access-token:${GITHUB_TOKEN}@pypi.pkg.github.com/panda-wayback/
 ```
 
 ## 使用

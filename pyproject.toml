@@ -3,7 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "panda-python-packages"
+# 使用下划线，这是 Python 推荐的包命名规范，也有利于 GitHub 识别
+name = "panda_python_packages"
 version = "0.1.0"
 description = 'A collection of Python utilities for Panda projects'
 readme = "README.md"
