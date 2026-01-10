@@ -1,50 +1,119 @@
-name: Publish to GitHub Packages
+name: Publish to PyPI
 
 on:
   push:
-    branches:
-      - main
     tags:
-      - 'v*'         # 打 tag v1.0.0 也会触发
-  workflow_dispatch:  # 手动触发
+      - 'v*'         # 打 tag v1.0.0 会触发发布到 PyPI
+  workflow_dispatch:  # 手动触发（可以选择上传到 TestPyPI 或正式 PyPI）
+    inputs:
+      repository:
+        description: '上传到哪个仓库 (testpypi 或 pypi)'
+        required: true
+        default: 'testpypi'
+        type: choice
+        options:
+          - testpypi
+          - pypi
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
 
     steps:
       # 1️⃣ 获取代码
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # 2️⃣ 安装 Python
+      # 2️⃣ 设置 Python 环境
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # 3️⃣ 安装依赖（Hatch + Twine）
-      - name: Install Dependencies
-        run: pip install --upgrade pip hatch twine
+      # 3️⃣ 安装构建依赖
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install hatch twine
 
-      # 4️⃣ 构建包
-      - name: Build Package
+      # 4️⃣ 构建包（生成 wheel 和 source distribution）
+      - name: Build package
         run: |
           rm -rf dist/
           hatch build
           echo "=== 构建完成，检查产物 ==="
           ls -lh dist/
 
-      # 5️⃣ 发布到 GitHub Packages
-      - name: Publish to GitHub Packages
-        env:
-          TWINE_USERNAME: ${{ github.repository_owner }}       # GitHub 用户名/组织名
-          TWINE_PASSWORD: ${{ secrets.GITHUB_PAT }}            # Personal Access Token，需 write:packages 权限
+      # 5️⃣ 确定上传目标仓库
+      - name: Determine repository
+        id: repo
         run: |
-          echo "=== 开始上传到 GitHub Packages ==="
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # 打 tag 时上传到正式 PyPI
+            echo "repository=pypi" >> $GITHUB_OUTPUT
+            echo "repository_url=https://upload.pypi.org/legacy/" >> $GITHUB_OUTPUT
+          else
+            # 手动触发时，根据输入决定
+            if [[ "${{ github.event.inputs.repository }}" == "pypi" ]]; then
+              echo "repository=pypi" >> $GITHUB_OUTPUT
+              echo "repository_url=https://upload.pypi.org/legacy/" >> $GITHUB_OUTPUT
+            else
+              echo "repository=testpypi" >> $GITHUB_OUTPUT
+              echo "repository_url=https://test.pypi.org/legacy/" >> $GITHUB_OUTPUT
+            fi
+          fi
+          echo "上传目标: ${{ steps.repo.outputs.repository }}"
+
+      # 6️⃣ 上传到 PyPI / TestPyPI
+      - name: Publish to PyPI
+        env:
+          # PyPI 认证：用户名必须是 __token__，密码是 API token
+          TWINE_USERNAME: __token__
+          # 根据目标仓库选择对应的 token
+          PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          TEST_PYPI_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          REPOSITORY: ${{ steps.repo.outputs.repository }}
+          REPOSITORY_URL: ${{ steps.repo.outputs.repository_url }}
+        run: |
+          echo "=== 开始上传到 $REPOSITORY ==="
+          echo "上传地址: $REPOSITORY_URL"
+          
+          # 根据目标仓库选择对应的 token
+          if [[ "$REPOSITORY" == "pypi" ]]; then
+            if [ -z "$PYPI_TOKEN" ]; then
+              echo "❌ 错误: 未配置 PYPI_API_TOKEN secret"
+              echo "请在仓库 Settings → Secrets and variables → Actions 中添加 PYPI_API_TOKEN"
+              exit 1
+            fi
+            export TWINE_PASSWORD="$PYPI_TOKEN"
+            echo "✅ 使用正式 PyPI token"
+          else
+            if [ -z "$TEST_PYPI_TOKEN" ]; then
+              echo "❌ 错误: 未配置 TEST_PYPI_API_TOKEN secret"
+              echo "请在仓库 Settings → Secrets and variables → Actions 中添加 TEST_PYPI_API_TOKEN"
+              exit 1
+            fi
+            export TWINE_PASSWORD="$TEST_PYPI_TOKEN"
+            echo "✅ 使用 TestPyPI token"
+          fi
+          
+          # 上传包
           twine upload \
-            --repository-url https://upload.pkg.github.com/${{ github.repository_owner }}/ \
+            --repository-url "$REPOSITORY_URL" \
             --verbose \
             dist/*
+          
+          echo ""
+          echo "✅ 上传成功到 $REPOSITORY！"
+          echo ""
+          if [[ "$REPOSITORY" == "pypi" ]]; then
+            echo "📦 安装方式:"
+            echo "   pip install panda-python-packages"
+          else
+            echo "📦 TestPyPI 安装方式:"
+            echo "   pip install -i https://test.pypi.org/simple/ panda-python-packages"
+            echo ""
+            echo "⚠️  注意: TestPyPI 仅用于测试，正式发布请使用正式 PyPI"
+          fi
