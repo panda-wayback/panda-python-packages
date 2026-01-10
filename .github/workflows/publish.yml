@@ -38,9 +38,9 @@ jobs:
           TWINE_USERNAME: ${{ github.repository_owner }}
           TWINE_PASSWORD: ${{ secrets.GITHUB_PAT }}
         run: |
-          # 使用正确的上传端点：upload.pypi.github.com (注意是 pypi，不是 pkg)
-          # 格式：https://upload.pypi.github.com/OWNER/REPO/
+          # 使用正确的上传端点：upload.pkg.github.com (注意是 pkg，不是 pypi)
+          # 格式：https://upload.pkg.github.com/OWNER/REPO/
           twine upload \
-            --repository-url https://upload.pypi.github.com/${{ github.repository }}/ \
+            --repository-url https://upload.pkg.github.com/${{ github.repository }}/ \
             --verbose \
             dist/*
