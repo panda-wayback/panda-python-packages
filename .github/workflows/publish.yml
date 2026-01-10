@@ -26,22 +26,35 @@ jobs:
       - name: Install Dependencies
         run: pip install hatch twine
 
-      - name: Build and Publish
+      - name: Build Package
+        run: |
+          rm -rf dist/
+          hatch build
+          
+          # 诊断：检查构建产物的元数据
+          echo "=== 检查构建产物 ==="
+          ls -lh dist/
+          echo ""
+          echo "=== 检查 wheel 文件内部元数据 ==="
+          unzip -p dist/*.whl *.dist-info/METADATA | grep -i "^Name:" || echo "未找到 Name 字段"
+          echo ""
+          echo "=== 检查 tar.gz 内部元数据 ==="
+          tar -xzf dist/*.tar.gz -O */PKG-INFO 2>/dev/null | grep -i "^Name:" || echo "未找到 Name 字段"
+
+      - name: Publish to GitHub Packages
         env:
           TWINE_USERNAME: ${{ github.actor }}
           TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 1. 清理
-          rm -rf dist/
+          # 尝试使用标准的上传端点（根据 GitHub 官方文档）
+          echo "=== 尝试上传到 GitHub Packages ==="
+          echo "Repository: ${{ github.repository }}"
+          echo "Repository Owner: ${{ github.repository_owner }}"
+          echo "Actor: ${{ github.actor }}"
           
-          # 2. 构建
-          hatch build
-          
-          # 3. 核心步骤：将文件名中的下划线强制改回横线，以匹配 GitHub 仓库名
-          # 这样可以绕过 GitHub Packages 的 404 校验逻辑
-          cd dist/
-          for f in *; do mv "$f" "${f//_/-}"; done
-          cd ..
-          
-          # 4. 上传到 OWNER 级别的 URL
-          twine upload --repository-url https://pypi.pkg.github.com/${{ github.repository_owner }}/ --verbose dist/*
+          # 方法 1: 使用 upload.pkg.github.com (上传端点)
+          twine upload --repository-url https://upload.pkg.github.com/${{ github.repository }}/ --verbose dist/* || \
+          # 方法 2: 如果方法1失败，尝试使用 pypi.pkg.github.com + OWNER
+          (echo "方法1失败，尝试方法2..." && twine upload --repository-url https://pypi.pkg.github.com/${{ github.repository_owner }}/ --verbose dist/*) || \
+          # 方法 3: 如果都失败，尝试使用完整仓库路径
+          (echo "方法2失败，尝试方法3..." && twine upload --repository-url https://pypi.pkg.github.com/${{ github.repository }}/ --verbose dist/*)
