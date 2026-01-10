@@ -31,7 +31,17 @@ jobs:
           TWINE_USERNAME: ${{ github.actor }}
           TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # 1. 清理
           rm -rf dist/
+          
+          # 2. 构建
           hatch build
-          # 注意：URL 必须是 OWNER/REPO/ 格式，且必须以斜杠结尾
-          twine upload --repository-url https://pypi.pkg.github.com/${{ github.repository }}/ --verbose dist/*
+          
+          # 3. 核心步骤：将文件名中的下划线强制改回横线，以匹配 GitHub 仓库名
+          # 这样可以绕过 GitHub Packages 的 404 校验逻辑
+          cd dist/
+          for f in *; do mv "$f" "${f//_/-}"; done
+          cd ..
+          
+          # 4. 上传到 OWNER 级别的 URL
+          twine upload --repository-url https://pypi.pkg.github.com/${{ github.repository_owner }}/ --verbose dist/*
