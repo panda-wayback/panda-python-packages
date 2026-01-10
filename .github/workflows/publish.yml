@@ -5,8 +5,8 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
-  workflow_dispatch:
+      - 'v*'         # 打 tag v1.0.0 也会触发
+  workflow_dispatch:  # 手动触发
 
 jobs:
   publish:
@@ -16,16 +16,20 @@ jobs:
       packages: write
 
     steps:
+      # 1️⃣ 获取代码
       - uses: actions/checkout@v4
 
+      # 2️⃣ 安装 Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
+      # 3️⃣ 安装依赖（Hatch + Twine）
       - name: Install Dependencies
-        run: pip install hatch twine
+        run: pip install --upgrade pip hatch twine
 
+      # 4️⃣ 构建包
       - name: Build Package
         run: |
           rm -rf dist/
@@ -33,14 +37,14 @@ jobs:
           echo "=== 构建完成，检查产物 ==="
           ls -lh dist/
 
+      # 5️⃣ 发布到 GitHub Packages
       - name: Publish to GitHub Packages
         env:
-          TWINE_USERNAME: ${{ github.repository_owner }}
-          TWINE_PASSWORD: ${{ secrets.GITHUB_PAT }}
+          TWINE_USERNAME: ${{ github.repository_owner }}       # GitHub 用户名/组织名
+          TWINE_PASSWORD: ${{ secrets.GITHUB_PAT }}            # Personal Access Token，需 write:packages 权限
         run: |
-          # 使用正确的上传端点：upload.pkg.github.com (注意是 pkg，不是 pypi)
-          # 格式：https://upload.pkg.github.com/OWNER/REPO/
+          echo "=== 开始上传到 GitHub Packages ==="
           twine upload \
-            --repository-url https://upload.pkg.github.com/${{ github.repository }}/ \
+            --repository-url https://upload.pkg.github.com/${{ github.repository_owner }}/ \
             --verbose \
             dist/*
