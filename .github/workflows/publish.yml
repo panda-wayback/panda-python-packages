@@ -27,6 +27,16 @@ jobs:
         run: |
           pip install --upgrade pip hatch twine tomli
 
+      - name: Install test dependencies
+        run: |
+          pip install -e ".[test]"
+
+      - name: Run tests with coverage
+        run: |
+          pytest --cov=src/panda_python_packages --cov-report=term-missing --cov-report=xml --cov-fail-under=80
+        env:
+          PYTHONPATH: src
+
       - name: Determine version and target
         id: version
         run: |

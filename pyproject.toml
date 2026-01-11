@@ -20,6 +20,36 @@ classifiers = [
 ]
 dependencies = []
 
+# 可选依赖：测试相关的包
+# 使用方式: pip install -e ".[test]"
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",        # pytest: Python 测试框架
+    "pytest-cov>=4.0.0",    # pytest-cov: 测试覆盖率工具
+]
+
+# pytest 配置选项
+[tool.pytest.ini_options]
+# 测试文件所在的目录
+testpaths = ["tests"]
+
+# 测试文件的命名模式（pytest 会自动发现这些文件）
+python_files = ["test_*.py"]    # 例如: test_singleton.py
+
+# 测试类的命名模式
+python_classes = ["Test*"]      # 例如: TestSingleton
+
+# 测试函数的命名模式
+python_functions = ["test_*"]   # 例如: test_basic_singleton
+
+# pytest 的默认命令行参数
+addopts = [
+    "-v",                    # verbose: 显示详细的测试结果
+    "--strict-markers",      # 严格检查标记（marker），防止拼写错误
+    "--tb=short",            # traceback 格式：简短格式（出错时显示简短的堆栈信息）
+]
+
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/panda_python_packages"]
 
