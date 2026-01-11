@@ -2,8 +2,11 @@ name: Publish to PyPI
 
 on:
   push:
+    branches:
+      - main      # 推送到 main 分支时触发
+      - master    # 推送到 master 分支时触发（如果使用 master 分支）
     tags:
-      - 'v*'  # 打 tag v1.0.0 会触发发布到 PyPI
+      - 'v*'      # 打 tag v1.0.0 会触发发布到 PyPI（使用正式版本号）
   workflow_dispatch:  # 手动触发
 
 jobs:
@@ -29,12 +32,17 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          # 确定版本号：tag 触发用 tag 版本，手动触发生成 dev 版本
+          # 确定版本号：
+          # - tag 触发：使用 tag 版本号（如 v1.0.0 -> 1.0.0）
+          # - push 触发：使用基础版本号 + dev 时间戳（如 0.1.0.dev20241201120000）
+          # - 手动触发：使用基础版本号 + dev 时间戳
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
+            echo "📌 Tag 触发，使用正式版本: $VERSION"
           else
             BASE=$(python -c "import tomli; print(tomli.load(open('pyproject.toml', 'rb'))['project']['version'])")
             VERSION="${BASE}.dev$(date +%Y%m%d%H%M%S)"
+            echo "🔄 Push/手动触发，使用开发版本: $VERSION"
           fi
           
           # 更新 pyproject.toml 并构建
