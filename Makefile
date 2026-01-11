@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test test-cov clean build lint format check all
+.PHONY: help install install-dev test test-cov clean build lint format check all release
 
 # 默认目标：显示帮助信息
 help:
@@ -15,6 +15,7 @@ help:
 	@echo "  make format        - 代码格式化（如果配置了）"
 	@echo "  make check         - 运行所有检查（测试 + lint）"
 	@echo "  make all           - 运行完整检查流程（测试 + 构建）"
+	@echo "  make release       - 打 tag 并发布正式版本到 PyPI"
 	@echo ""
 
 # 安装包（开发模式）
@@ -98,3 +99,44 @@ check: test lint
 # 完整流程：测试 + 构建
 all: clean test build
 	@echo "✅ 完整流程执行完成！"
+
+# 打 tag 并发布正式版本
+release:
+	@echo "🚀 准备发布正式版本..."
+	@echo ""
+	@# 检查是否有未提交的更改
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		echo "❌ 错误: 有未提交的更改，请先提交或暂存"; \
+		git status --short; \
+		exit 1; \
+	fi
+	@# 从 pyproject.toml 读取版本号并检查 tag
+	@VERSION=$$(python -c "import tomli; print(tomli.load(open('pyproject.toml', 'rb'))['project']['version'])") || exit 1; \
+	TAG="v$$VERSION"; \
+	echo "📌 当前版本: $$VERSION"; \
+	echo "📌 将创建 tag: $$TAG"; \
+	echo ""; \
+	if git rev-parse "$$TAG" >/dev/null 2>&1; then \
+		echo "❌ 错误: Tag $$TAG 已存在"; \
+		echo "   如需重新发布，请先删除 tag: git tag -d $$TAG && git push origin :refs/tags/$$TAG"; \
+		exit 1; \
+	fi
+	@# 运行测试确保代码质量
+	@echo "🧪 运行测试（覆盖率必须 >= 80%）..."
+	@VERSION=$$(python -c "import tomli; print(tomli.load(open('pyproject.toml', 'rb'))['project']['version'])") || exit 1; \
+	pytest --cov=src/panda_python_packages --cov-report=term-missing --cov-fail-under=80 || \
+		(echo "❌ 测试或覆盖率未达标，无法发布" && exit 1)
+	@echo ""
+	@# 创建并推送 tag
+	@VERSION=$$(python -c "import tomli; print(tomli.load(open('pyproject.toml', 'rb'))['project']['version'])") || exit 1; \
+	TAG="v$$VERSION"; \
+	echo "🏷️  创建 tag: $$TAG"; \
+	git tag -a "$$TAG" -m "Release $$TAG" || exit 1; \
+	echo "📤 推送 tag 到远程仓库..."; \
+	git push origin "$$TAG" || (echo "❌ 推送失败，请检查远程仓库配置" && exit 1); \
+	echo ""; \
+	echo "✅ Tag $$TAG 已创建并推送"; \
+	echo "🔄 GitHub Actions 将自动触发，发布到正式 PyPI"; \
+	echo ""; \
+	echo "📦 发布完成后，可以通过以下命令安装："; \
+	echo "   pip install panda-python-packages==$$VERSION"
