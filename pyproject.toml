@@ -21,8 +21,7 @@ classifiers = [
 dependencies = []
 
 [tool.hatch.build.targets.wheel]
-where = "src"
-packages = ["panda_python_packages"]
+packages = ["src/panda_python_packages"]
 
 [project.urls]
 Homepage = "https://github.com/panda-wayback/panda-python-packages"
