@@ -3,7 +3,7 @@ name: Publish to PyPI
 on:
   push:
     branches:
-      - main      # 推送到 main 分支时触发
+      - main      # 推送到 main 分支时触发（发布开发版本到 PyPI）
       - master    # 推送到 master 分支时触发（如果使用 master 分支）
     tags:
       - 'v*'      # 打 tag v1.0.0 会触发发布到 PyPI（使用正式版本号）
@@ -33,16 +33,20 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           # 确定版本号：
-          # - tag 触发：使用 tag 版本号（如 v1.0.0 -> 1.0.0）
-          # - push 触发：使用基础版本号 + dev 时间戳（如 0.1.0.dev20241201120000）
+          # - tag 触发：使用 tag 版本号（如 v1.0.0 -> 1.0.0），发布正式版本
+          # - push 触发：使用基础版本号 + dev 时间戳（如 0.1.0.dev20241201120000），发布开发版本
+          #   注意：开发版本优先级低于正式版本，不会影响 pip install 的默认行为
           # - 手动触发：使用基础版本号 + dev 时间戳
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
+            IS_DEV=false
             echo "📌 Tag 触发，使用正式版本: $VERSION"
           else
             BASE=$(python -c "import tomli; print(tomli.load(open('pyproject.toml', 'rb'))['project']['version'])")
             VERSION="${BASE}.dev$(date +%Y%m%d%H%M%S)"
+            IS_DEV=true
             echo "🔄 Push/手动触发，使用开发版本: $VERSION"
+            echo "ℹ️  开发版本不会影响正常安装，pip install 默认会安装正式版本"
           fi
           
           # 更新 pyproject.toml 并构建
@@ -58,5 +62,12 @@ jobs:
           
           twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
           
-          echo "✅ 发布成功: v$VERSION"
-          echo "📦 pip install panda-python-packages==$VERSION"
+          if [ "$IS_DEV" = true ]; then
+            echo "✅ 开发版本发布成功: $VERSION"
+            echo "📦 安装开发版本: pip install panda-python-packages==$VERSION"
+            echo "📦 安装正式版本: pip install panda-python-packages  # 默认安装正式版本"
+          else
+            echo "✅ 正式版本发布成功: v$VERSION"
+            echo "📦 pip install panda-python-packages==$VERSION"
+            echo "📦 或直接: pip install panda-python-packages  # 会安装最新正式版本"
+          fi

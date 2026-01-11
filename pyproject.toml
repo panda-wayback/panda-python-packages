@@ -3,8 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-# 必须与 GitHub 仓库名完全一致，不能用下划线代替横线！
-name = "panda-python-packages"
+name = "panda-python-packages"  # GitHub 仓库名
 version = "0.1.0"
 description = 'A collection of Python utilities for Panda projects'
 readme = "README.md"
@@ -15,7 +14,6 @@ authors = [
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
-  "Programming Language :: Python",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -23,12 +21,7 @@ classifiers = [
 dependencies = []
 
 [tool.hatch.build.targets.wheel]
-# 指定包的源目录，这样项目内部文件可以正确相互引用
-where = ["src"]
-# 明确指定要包含的包（相对于 where 目录）
-# 可以配置多个包，例如：
-# packages = ["panda_python_packages", "pkg2", "pkg3"]
-# 如果不指定 packages，会自动发现 where 目录下的所有包
+where = "src"
 packages = ["panda_python_packages"]
 
 [project.urls]
