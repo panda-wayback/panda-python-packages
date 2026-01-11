@@ -15,7 +15,8 @@ help:
 	@echo "  make format        - 代码格式化（如果配置了）"
 	@echo "  make check         - 运行所有检查（测试 + lint）"
 	@echo "  make all           - 运行完整检查流程（测试 + 构建）"
-	@echo "  make release       - 打 tag 并发布正式版本到 PyPI"
+	@echo "  make release       - 自动递增 patch 版本号并发布（默认）"
+	@echo "  make release TAG=v1.0.0 - 手动指定 tag（跳过自动递增）"
 	@echo ""
 
 # 安装包（开发模式）
@@ -100,22 +101,47 @@ check: test lint
 all: clean test build
 	@echo "✅ 完整流程执行完成！"
 
-# 打 tag 并发布正式版本
-# 使用方法: make release 或 make release TAG=v1.0.0
+# 打 tag 并发布正式版本（自动递增版本号）
+# 使用方法: 
+#   make release          - 自动递增 patch 版本号（0.1.0 -> 0.1.1）
+#   make release TAG=v1.0.0 - 手动指定 tag（跳过自动递增）
 release:
-	@if [ -z "$(TAG)" ]; then \
-		VERSION=$$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/'); \
-		TAG="v$$VERSION"; \
+	@if [ -n "$(TAG)" ]; then \
+		NEW_TAG="$(TAG)"; \
+		NEW_VERSION=$$(echo "$$NEW_TAG" | sed 's/^v//'); \
+		echo "🚀 使用指定 tag: $$NEW_TAG"; \
+		echo "📝 更新 pyproject.toml..."; \
+		sed -i '' "s/^version = \".*\"/version = \"$$NEW_VERSION\"/" pyproject.toml 2>/dev/null || \
+		sed -i "s/^version = \".*\"/version = \"$$NEW_VERSION\"/" pyproject.toml; \
 	else \
-		TAG="$(TAG)"; \
+		LATEST_TAG=$$(git describe --tags --abbrev=0 2>/dev/null || echo ""); \
+		if [ -z "$$LATEST_TAG" ]; then \
+			CURRENT_VERSION=$$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/'); \
+			echo "📌 未找到现有 tag，使用 pyproject.toml 中的版本: $$CURRENT_VERSION"; \
+			LATEST_VERSION="$$CURRENT_VERSION"; \
+		else \
+			LATEST_VERSION=$$(echo "$$LATEST_TAG" | sed 's/^v//'); \
+			echo "📌 最新 tag: $$LATEST_TAG"; \
+		fi; \
+		MAJOR=$$(echo "$$LATEST_VERSION" | cut -d. -f1); \
+		MINOR=$$(echo "$$LATEST_VERSION" | cut -d. -f2); \
+		PATCH=$$(echo "$$LATEST_VERSION" | cut -d. -f3); \
+		PATCH=$$((PATCH + 1)); \
+		NEW_VERSION="$$MAJOR.$$MINOR.$$PATCH"; \
+		NEW_TAG="v$$NEW_VERSION"; \
+		echo "📌 自动递增 patch 版本号"; \
+		echo "📌 新版本: $$NEW_VERSION ($$LATEST_VERSION -> $$NEW_VERSION)"; \
+		echo "📌 新 tag: $$NEW_TAG"; \
+		echo ""; \
+		echo "📝 更新 pyproject.toml..."; \
+		sed -i '' "s/^version = \".*\"/version = \"$$NEW_VERSION\"/" pyproject.toml 2>/dev/null || \
+		sed -i "s/^version = \".*\"/version = \"$$NEW_VERSION\"/" pyproject.toml; \
 	fi; \
-	echo "🚀 准备发布正式版本..."; \
-	echo "📌 将创建 tag: $$TAG"; \
 	echo ""; \
-	echo "🏷️  创建 tag: $$TAG"; \
-	git tag -a "$$TAG" -m "Release $$TAG" || exit 1; \
+	echo "🏷️  创建 tag: $$NEW_TAG"; \
+	git tag -a "$$NEW_TAG" -m "Release $$NEW_TAG" || exit 1; \
 	echo "📤 推送 tag 到远程仓库..."; \
-	git push origin "$$TAG" || (echo "❌ 推送失败，请检查远程仓库配置" && exit 1); \
+	git push origin "$$NEW_TAG" || (echo "❌ 推送失败，请检查远程仓库配置" && exit 1); \
 	echo ""; \
-	echo "✅ Tag $$TAG 已创建并推送"; \
+	echo "✅ Tag $$NEW_TAG 已创建并推送"; \
 	echo "🔄 GitHub Actions 将自动触发，发布到正式 PyPI"
